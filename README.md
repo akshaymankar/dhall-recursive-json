@@ -2,7 +2,7 @@
 
 ## What is this project?
 
-Doing recursion is dhall isn't really obvious. But with (Boehm Berducci Encoding)[https://github.com/dhall-lang/dhall-lang/wiki/How-to-translate-recursive-code-to-Dhall], it is possible to represent recursive data.
+Doing recursion is dhall isn't really obvious. But with [Boehm Berducci Encoding](https://github.com/dhall-lang/dhall-lang/wiki/How-to-translate-recursive-code-to-Dhall), it is possible to represent recursive data.
 The `dhall-to-json` tool still cannot convert this recursive data to json out of the box (or at least I couldn't figure it out).
 
 This tool is an extension on dhall-to-json, it adds a `JSON` type and a function called `toJSON` to make anything into a JSON.
@@ -11,7 +11,7 @@ This tool is an extension on dhall-to-json, it adds a `JSON` type and a function
 ## How to install
 
 1. Clone this repository
-1. Install (stack)[https://docs.haskellstack.org/en/stable/README/]
+1. Install [stack](https://docs.haskellstack.org/en/stable/README/)
 1. `cd dhall-recursive-json`
 1. stack install
 
