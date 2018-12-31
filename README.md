@@ -38,7 +38,7 @@ produces
 
 #### More practical example
 
-```dhall
+```haskell
 let Expr =
       ∀(Expr : Type)
     → ∀(Lit : Natural → Expr)
