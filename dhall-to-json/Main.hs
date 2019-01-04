@@ -32,6 +32,8 @@ import qualified Lens.Family                               as Lens
 import qualified System.Console.ANSI
 import qualified System.IO
 
+import qualified Dhall.JSONExts
+
 throws :: Exception e => Either e a -> IO a
 throws (Left  e) = Control.Exception.throwIO e
 throws (Right a) = return a
@@ -39,29 +41,13 @@ throws (Right a) = return a
 main :: IO ()
 main = do
     text <- Data.Text.IO.getContents
-
-    let startingContext = transform Dhall.Context.empty
-          where
-            transformers = [ ("toJSON", Pi "t" (Const Type) (Pi "x" (Var (V "t" 0)) (Var (V "JSON" 0))))
-                           , ("JSON", Const Type)]
-            transform = (flip $ foldr (uncurry Dhall.Context.insert)) transformers
-
-    let normalizer (App (App (Var "toJSON") _) x) = pure (Just x)
-        normalizer _ =
-            pure Nothing
-
-    let inputSettings = transform Dhall.defaultInputSettings
-          where
-            transform =
-                  Lens.set Dhall.normalizer      (ReifiedNormalizer (normalizer))
-                . Lens.set Dhall.startingContext startingContext
-
     expression <- throws (Dhall.Parser.exprFromText "(stdin)" text)
+
     resolvedExpression <- State.evalStateT (Dhall.Import.loadWith expression) (Dhall.Import.emptyStatus ".")
 
-    inferredType <- throws (Dhall.TypeCheck.typeWith startingContext resolvedExpression)
+    inferredType <- throws (Dhall.JSONExts.typeOf resolvedExpression)
 
-    let normalizedExpression = Dhall.Core.normalizeWith normalizer resolvedExpression
+    let normalizedExpression = Dhall.JSONExts.normalize resolvedExpression
 
     case Dhall.JSON.dhallToJSON normalizedExpression of
       Left err -> Control.Exception.throwIO err

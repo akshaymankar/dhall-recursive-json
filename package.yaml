@@ -31,15 +31,36 @@ dependencies:
 - prettyprinter-ansi-terminal
 - aeson-pretty
 - bytestring
+- optparse-applicative
+- cborg
+- cborg-json
+- serialise
+- aeson
+- dotgen
+
+library:
+  source-dirs: src
 
 executables:
-  dhall-to-recursive-json:
+  dhall-to-json:
     main:                Main.hs
-    source-dirs:         app
+    source-dirs:         dhall-to-json
     ghc-options:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    dependencies:
+    - dhall-recursive-json
+
+  dhall:
+    main:                Main.hs
+    source-dirs:         dhall
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dhall-recursive-json
 
 tests:
   dhall-recursive-json-test:
