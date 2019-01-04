@@ -2,37 +2,18 @@
 
 module Main where
 
-import Control.Exception         (Exception, SomeException)
-import Data.Text                 (pack)
-import Data.Text.Prettyprint.Doc (Doc, Pretty)
-import Dhall.Core                (Chunks, Const (..), Expr (..),
-                                  ReifiedNormalizer (..), Var (..),
-                                  normalizeWith)
-import Dhall.Pretty              (Ann, CharacterSet (..), annToAnsiStyle,
-                                  layoutOpts)
-import System.IO                 (Handle)
+import Control.Exception (Exception)
 
 import qualified Control.Exception
-import qualified Control.Monad.Trans.State.Strict          as State
+import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.Aeson.Encode.Pretty
 import qualified Data.ByteString.Char8
 import qualified Data.ByteString.Lazy
 import qualified Data.Text.IO
-import qualified Data.Text.Prettyprint.Doc                 as Pretty
-import qualified Data.Text.Prettyprint.Doc.Render.Terminal as Pretty
-import qualified Dhall
-import qualified Dhall.Context
 import qualified Dhall.Import
 import qualified Dhall.JSON
-import qualified Dhall.Map                                 as Map
-import qualified Dhall.Parser
-import qualified Dhall.Pretty
-import qualified Dhall.TypeCheck
-import qualified Lens.Family                               as Lens
-import qualified System.Console.ANSI
-import qualified System.IO
-
 import qualified Dhall.JSONExts
+import qualified Dhall.Parser
 
 throws :: Exception e => Either e a -> IO a
 throws (Left  e) = Control.Exception.throwIO e
