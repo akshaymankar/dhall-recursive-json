@@ -1,13 +1,25 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
 
-module Dhall.JSONExts (typeOf, normalize) where
+module Dhall.JSONExts (typeOf, normalize, codeToValue) where
 
+
+import Control.Exception (Exception)
+import Data.Aeson        (Value)
+import Data.Text         (Text)
+import Dhall.Core        (Chunks, Const (..), Expr (..), ReifiedNormalizer (..),
+                          Var (..), normalizeWith)
+import Dhall.JSON        (Conversion)
+import Dhall.TypeCheck   (TypeError, X, typeWith)
+
+import qualified Control.Exception
+import qualified Control.Monad.Trans.State.Strict as State
+import qualified Data.Text
 import qualified Dhall.Context
-
-import Dhall.Core      (Chunks, Const (..), Expr (..), ReifiedNormalizer (..),
-                        Var (..), normalizeWith)
-import Dhall.TypeCheck (TypeError, X, typeWith)
-
+import qualified Dhall.Core
+import qualified Dhall.Import
+import qualified Dhall.JSON
+import qualified Dhall.Parser
 
 startingContext :: Dhall.Context.Context (Expr s a)
 startingContext =
@@ -26,3 +38,22 @@ normalize = Dhall.Core.normalizeWith normalizer
         normalizer _ =
             pure Nothing
 
+codeToValue :: Conversion -> Text -> Text -> IO Value
+codeToValue conversion name code = do
+  expression <- throws (Dhall.Parser.exprFromText (Data.Text.unpack name) code)
+
+  resolvedExpression <- State.evalStateT (Dhall.Import.loadWith expression) (Dhall.Import.emptyStatus ".")
+
+  inferredType <- throws (Dhall.JSONExts.typeOf resolvedExpression)
+
+  let normalizedExpression = normalize resolvedExpression
+
+  let convertedExpression = Dhall.JSON.convertToHomogeneousMaps conversion normalizedExpression
+
+  case Dhall.JSON.dhallToJSON convertedExpression of
+    Left err   -> Control.Exception.throwIO err
+    Right json -> return json
+
+throws :: Exception e => Either e a -> IO a
+throws (Left  e) = Control.Exception.throwIO e
+throws (Right a) = return a
