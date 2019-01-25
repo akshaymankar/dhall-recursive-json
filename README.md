@@ -6,7 +6,7 @@ Doing recursion is dhall isn't really obvious. But with [Boehm Berducci Encoding
 The `dhall-to-json` tool still cannot convert this recursive data to json out of the box (or at least I couldn't figure it out).
 
 This tool is an extension on dhall-to-json, it adds a `JSON` type and a function called `toJSON` to make anything into a JSON.
-`toJSON` is of type `forall(t : Type) -> (x : t) -> JSON`.
+`toJSON` is of type `forall(t : Type) -> (x : t) -> JSON`. You can also use `dhall-to-yaml` to render YAML instead of JSON.
 
 ## How to install
 
@@ -91,8 +91,3 @@ produces
     }
 }
 ```
-
-
-## Support for YAML?
-
-Coming soon!
