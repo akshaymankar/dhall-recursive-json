@@ -20,6 +20,7 @@ import qualified Dhall.Core
 import qualified Dhall.Import
 import qualified Dhall.JSON
 import qualified Dhall.Parser
+import qualified Lens.Family                      as Lens
 
 startingContext :: Dhall.Context.Context (Expr s a)
 startingContext =
@@ -38,11 +39,12 @@ normalize = Dhall.Core.normalizeWith normalizer
         normalizer _ =
             pure Nothing
 
+
 codeToValue :: Conversion -> Text -> Text -> IO Value
 codeToValue conversion name code = do
   expression <- throws (Dhall.Parser.exprFromText (Data.Text.unpack name) code)
 
-  resolvedExpression <- State.evalStateT (Dhall.Import.loadWith expression) (Dhall.Import.emptyStatus ".")
+  resolvedExpression <- State.evalStateT (Dhall.Import.loadWith expression) (Lens.set Dhall.Import.startingContext startingContext $ Dhall.Import.emptyStatus ".")
 
   inferredType <- throws (Dhall.JSONExts.typeOf resolvedExpression)
 
