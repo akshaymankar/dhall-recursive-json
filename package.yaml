@@ -74,6 +74,17 @@ executables:
     dependencies:
     - dhall-recursive-json
 
+  fly:
+    main:                Main.hs
+    source-dirs:         fly
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dhall-recursive-json
+
+
 tests:
   dhall-recursive-json-test:
     main:                Spec.hs

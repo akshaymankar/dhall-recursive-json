@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 
-module Dhall.JSONExts (typeOf, normalize, codeToValue) where
+module Dhall.JSONExts (typeOf, startingContext, normalize, codeToValue) where
 
 
 import Control.Exception (Exception)
