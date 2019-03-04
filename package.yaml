@@ -21,6 +21,7 @@ description:         Please see the README on GitHub at <https://github.com/aksh
 
 dependencies:
 - aeson
+- aeson-casing
 - aeson-pretty
 - ansi-terminal
 - base >= 4.7 && < 5
@@ -37,6 +38,7 @@ dependencies:
 - serialise
 - text
 - transformers
+- unordered-containers
 - vector
 - yaml
 
@@ -74,9 +76,9 @@ executables:
     dependencies:
     - dhall-recursive-json
 
-  fly:
+  dc:
     main:                Main.hs
-    source-dirs:         fly
+    source-dirs:         dc
     ghc-options:
     - -threaded
     - -rtsopts

@@ -6,11 +6,11 @@ module Fly.Interpret where
 import Data.Aeson      (Value)
 import Data.Text       (Text)
 import Dhall
-import Dhall.Core      (Chunks (..), Expr (..), Var(..))
+import Dhall.Core      (Chunks (..), Expr (..), Var (..))
 import Dhall.Map       (Map, fromList, lookup)
 import Dhall.Parser    (Src)
 import Dhall.TypeCheck (X)
-import Fly.Types
+import Fly.Types       hiding (getVersion, resourceType, stepHooks, taskSpec)
 
 import qualified Dhall.Core
 import qualified Dhall.JSON
@@ -133,9 +133,10 @@ jobInDhall = Record (fromList [ ("name", Text)
 assocList :: Type Value
 assocList = Type{..} where
   expected = assocListInDhall
-  extract l@(ListLit _ _) = case Dhall.JSON.dhallToJSON l of
+  extract l@(ListLit _ _) = case Dhall.JSON.dhallToJSON (Dhall.JSON.convertToHomogeneousMaps c l) of
                               Left _  -> Nothing
                               Right v -> pure v
+                            where c = Dhall.JSON.Conversion "mapKey" "mapValue"
   extract _ = Nothing
 
 textPair :: Type (Text, Text)
@@ -144,39 +145,39 @@ textPair = Type{..} where
   extract (RecordLit m) = (,)
                        <$> extractFromMap "mapKey" strictText
                        <*> extractFromMap "mapValue" strictText
-                       where extractFromMap = interpretWithType m
+                       where extractFromMap = withType m
   extract _ = Nothing
 extractCustomResourceType m = ResourceTypeCustom
     <$> extractFromMap "name" strictText
     <*> extractFromMap "type" strictText
     <*> extractFromMap "source" (Dhall.maybe assocList)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
 
-interpretResourceType :: Type ResourceType
-interpretResourceType = Type{..} where
+resourceType :: Type ResourceType
+resourceType = Type{..} where
   expected = resourceTypeInDhall
   extract (UnionLit "Custom" (RecordLit m) _) = extractCustomResourceType m
   extract (UnionLit "InBuilt" (TextLit (Chunks [] t)) _) = pure $ ResourceTypeInBuilt t
   extract _ = Nothing
 
-interpretResource :: Type Resource
-interpretResource = Type{..} where
+resource :: Type Resource
+resource = Type{..} where
   expected = resourceInDhall
   extract (RecordLit m) =
     Resource
     <$> extractFromMap "name"          strictText
-    <*> extractFromMap "type"          interpretResourceType
+    <*> extractFromMap "type"          resourceType
     <*> extractFromMap "source"        (Dhall.maybe assocList)
     <*> extractFromMap "version"       (Dhall.maybe assocList)
     <*> extractFromMap "params"        (Dhall.maybe assocList)
     <*> extractFromMap "check_every"   (Dhall.maybe strictText)
     <*> extractFromMap "tags"          (Dhall.maybe $ list strictText)
     <*> extractFromMap "webhook_token" (Dhall.maybe strictText)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskRunConfig :: Type TaskRunConfig
-interpretTaskRunConfig = Type{..} where
+taskRunConfig :: Type TaskRunConfig
+taskRunConfig = Type{..} where
   expected = taskRunConfigInDhall
   extract (RecordLit m) =
     TaskRunConfig
@@ -184,11 +185,11 @@ interpretTaskRunConfig = Type{..} where
     <*> extractFromMap "args" (Dhall.maybe $ list strictText)
     <*> extractFromMap "dir"  (Dhall.maybe strictText)
     <*> extractFromMap "user" (Dhall.maybe strictText)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskImageResource :: Type TaskImageResource
-interpretTaskImageResource = Type{..} where
+taskImageResource :: Type TaskImageResource
+taskImageResource = Type{..} where
   expected = taskImageResourceInDhall
   extract (RecordLit m) =
     TaskImageResource
@@ -196,64 +197,64 @@ interpretTaskImageResource = Type{..} where
     <*> extractFromMap "source" assocList
     <*> extractFromMap "params"  (Dhall.maybe assocList)
     <*> extractFromMap "version" (Dhall.maybe assocList)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskInput :: Type TaskInput
-interpretTaskInput = Type{..} where
+taskInput :: Type TaskInput
+taskInput = Type{..} where
   expected = taskInputInDhall
   extract (RecordLit m) =
     TaskInput
     <$> extractFromMap "name" strictText
     <*> extractFromMap "path" (Dhall.maybe strictText)
     <*> extractFromMap "optional"  (Dhall.maybe bool)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskOutput :: Type TaskOutput
-interpretTaskOutput = Type{..} where
+taskOutput :: Type TaskOutput
+taskOutput = Type{..} where
   expected = taskOutputInDhall
   extract (RecordLit m) =
     TaskOutput
     <$> extractFromMap "name" strictText
     <*> extractFromMap "path" (Dhall.maybe strictText)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskCache :: Type TaskCache
-interpretTaskCache = Type{..} where
+taskCache :: Type TaskCache
+taskCache = Type{..} where
   expected = taskCacheInDhall
   extract (RecordLit m) =
     TaskCache
     <$> extractFromMap "path" strictText
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskConfig :: Type TaskConfig
-interpretTaskConfig = Type{..} where
+taskConfig :: Type TaskConfig
+taskConfig = Type{..} where
   expected = taskConfigInDhall
   extract (RecordLit m) =
     TaskConfig
     <$> extractFromMap "platform" strictText
-    <*> extractFromMap "run" interpretTaskRunConfig
-    <*> extractFromMap "image_resource" (Dhall.maybe interpretTaskImageResource)
+    <*> extractFromMap "run" taskRunConfig
+    <*> extractFromMap "image_resource" (Dhall.maybe taskImageResource)
     <*> extractFromMap "rootfs_uri" (Dhall.maybe strictText)
-    <*> extractFromMap "inputs" (Dhall.maybe $ list interpretTaskInput)
-    <*> extractFromMap "outputs" (Dhall.maybe $ list interpretTaskOutput)
-    <*> extractFromMap "caches" (Dhall.maybe $ list interpretTaskCache)
+    <*> extractFromMap "inputs" (Dhall.maybe $ list taskInput)
+    <*> extractFromMap "outputs" (Dhall.maybe $ list taskOutput)
+    <*> extractFromMap "caches" (Dhall.maybe $ list taskCache)
     <*> extractFromMap "params" (Dhall.maybe $ list textPair)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
   extract _ = Nothing
 
-interpretTaskSpec :: Type TaskSpec
-interpretTaskSpec = Type{..} where
+taskSpec :: Type TaskSpec
+taskSpec = Type{..} where
   expected = taskSpecInDhall
-  extract (UnionLit "Config" c _) = TaskSpecConfig <$> Dhall.extract interpretTaskConfig c
+  extract (UnionLit "Config" c _) = TaskSpecConfig <$> Dhall.extract taskConfig c
   extract (UnionLit "File" (TextLit (Chunks [] t)) _) = pure $ TaskSpecFile t
   extract _ = Nothing
 
-interpretStep :: Type Step
-interpretStep = Type{..} where
+step :: Type Step
+step = Type{..} where
   expected = stepInDhall
   extract (Lam _ _ -- Step
            (Lam _ _ -- GetStep
@@ -265,8 +266,8 @@ interpretStep = Type{..} where
                  x))))))) = extractStepFromApps x
   extract x = extractStepFromApps x -- While recursive it loses all the `Lam`s
 
-interpretGetVersion :: Type GetVersion
-interpretGetVersion = Type{..} where
+getVersion :: Type GetVersion
+getVersion = Type{..} where
   expected = getVersionInDhall
   extract (UnionLit "Latest" (TextLit _) _) = pure GetVersionLatest
   extract (UnionLit "Every" (TextLit _) _) = pure GetVersionEvery
@@ -275,76 +276,76 @@ interpretGetVersion = Type{..} where
         Left _  -> Nothing
         Right v -> pure $ GetVersionSpecific v
 
-interpretGetStep :: Type GetStep
-interpretGetStep = Type{..} where
+getStep :: Type GetStep
+getStep = Type{..} where
   expected = getStepInDhall
   extract (RecordLit m) =
     GetStep
     <$> extractFromMap "get" (Dhall.maybe strictText)
-    <*> extractFromMap "resource" interpretResource
+    <*> extractFromMap "resource" resource
     <*> extractFromMap "params" (Dhall.maybe assocList)
-    <*> extractFromMap "version" (Dhall.maybe interpretGetVersion)
+    <*> extractFromMap "version" (Dhall.maybe getVersion)
     <*> extractFromMap "passed" (Dhall.maybe $ list strictText)
     <*> extractFromMap "trigger" (Dhall.maybe bool)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
 
-interpretPutStep :: Type PutStep
-interpretPutStep = Type{..} where
+putStep :: Type PutStep
+putStep = Type{..} where
   expected = putStepInDhall
   extract (RecordLit m) =
     PutStep
     <$> extractFromMap "put" (Dhall.maybe strictText)
-    <*> extractFromMap "resource" interpretResource
+    <*> extractFromMap "resource" resource
     <*> extractFromMap "params" (Dhall.maybe assocList)
     <*> extractFromMap "get_params" (Dhall.maybe assocList)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
 
-interpretTaskStep :: Type TaskStep
-interpretTaskStep = Type{..} where
+taskStep :: Type TaskStep
+taskStep = Type{..} where
   expected = taskStepInDhall
   extract (RecordLit m) =
     TaskStep
     <$> extractFromMap "task" strictText
-    <*> extractFromMap "config" interpretTaskSpec
+    <*> extractFromMap "config" taskSpec
     <*> extractFromMap "privileged" (Dhall.maybe bool)
     <*> extractFromMap "params" (Dhall.maybe $ list textPair)
     <*> extractFromMap "image" (Dhall.maybe strictText)
     <*> extractFromMap "input_mapping" (Dhall.maybe $ list textPair)
     <*> extractFromMap "output_mapping" (Dhall.maybe $ list textPair)
-    where extractFromMap = interpretWithType m
+    where extractFromMap = withType m
 
-interpretStepHooks :: Expr Src X -> Type StepHooks
-interpretStepHooks step = Type{..} where
-  expected = stepHooksInDhall step
+stepHooks :: Expr Src X -> Type StepHooks
+stepHooks s = Type{..} where
+  expected = stepHooksInDhall s
   extract (RecordLit m) =
     StepHooks
-    <$> extractFromMap "on_success" (Dhall.maybe interpretStep)
-    <*> extractFromMap "on_failure" (Dhall.maybe interpretStep)
-    <*> extractFromMap "on_abort" (Dhall.maybe interpretStep)
-    <*> extractFromMap "ensure" (Dhall.maybe interpretStep)
-    where extractFromMap = interpretWithType m
+    <$> extractFromMap "on_success" (Dhall.maybe step)
+    <*> extractFromMap "on_failure" (Dhall.maybe step)
+    <*> extractFromMap "on_abort" (Dhall.maybe step)
+    <*> extractFromMap "ensure" (Dhall.maybe step)
+    where extractFromMap = withType m
   extract _ = Nothing
 
 extractStepFromApps :: Expr Src X -> Maybe Step
 extractStepFromApps (App (App (Var (V "_" n)) s) hooks) =
-  stepFn <*> Dhall.extract (interpretStepHooks (Var (V "_" 6))) hooks
+  stepFn <*> Dhall.extract (stepHooks (Var (V "_" 6))) hooks
   where stepFn = case n of
-                   5 -> Get <$> Dhall.extract interpretGetStep s
-                   4 -> Put <$> Dhall.extract interpretPutStep s
-                   3 -> Task <$> Dhall.extract interpretTaskStep s
-                   2 -> Aggregate <$> Dhall.extract (list interpretStep) s
-                   1 -> Do <$> Dhall.extract (list interpretStep) s
-                   0 -> Try <$> Dhall.extract interpretStep s
+                   5 -> Get <$> Dhall.extract getStep s
+                   4 -> Put <$> Dhall.extract putStep s
+                   3 -> Task <$> Dhall.extract taskStep s
+                   2 -> Aggregate <$> Dhall.extract (list step) s
+                   1 -> Do <$> Dhall.extract (list step) s
+                   0 -> Try <$> Dhall.extract step s
                    _ -> Nothing
 extractStepFromApps _ = Nothing
 
-interpretJob :: Type Job
-interpretJob = Type{..} where
+job :: Type Job
+job = Type{..} where
   expected = jobInDhall
   extract (RecordLit m) =
     Job
     <$> extractFromMap "name" strictText
-    <*> extractFromMap "plan" (list interpretStep)
+    <*> extractFromMap "plan" (list step)
     <*> extractFromMap "serial" (Dhall.maybe bool)
     <*> extractFromMap "build_logs_to_retain" (Dhall.maybe natural)
     <*> extractFromMap "serial_groups" (Dhall.maybe $ list strictText)
@@ -352,13 +353,13 @@ interpretJob = Type{..} where
     <*> extractFromMap "public" (Dhall.maybe bool)
     <*> extractFromMap "disable_manual_trigger" (Dhall.maybe bool)
     <*> extractFromMap "interruptible" (Dhall.maybe bool)
-    <*> extractFromMap "on_success" (Dhall.maybe interpretStep)
-    <*> extractFromMap "on_failure" (Dhall.maybe interpretStep)
-    <*> extractFromMap "on_abort" (Dhall.maybe interpretStep)
-    <*> extractFromMap "ensure" (Dhall.maybe interpretStep)
-    where extractFromMap = interpretWithType m
+    <*> extractFromMap "on_success" (Dhall.maybe step)
+    <*> extractFromMap "on_failure" (Dhall.maybe step)
+    <*> extractFromMap "on_abort" (Dhall.maybe step)
+    <*> extractFromMap "ensure" (Dhall.maybe step)
+    where extractFromMap = withType m
 
   extract _ = Nothing
 
-interpretWithType :: Map Text (Expr Src X) -> Text -> Type a -> Maybe a
-interpretWithType m key t = Dhall.extract t =<< Dhall.Map.lookup key m
+withType :: Map Text (Expr Src X) -> Text -> Type a -> Maybe a
+withType m key t = Dhall.extract t =<< Dhall.Map.lookup key m
