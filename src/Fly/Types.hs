@@ -23,7 +23,7 @@ data ResourceType = ResourceTypeInBuilt Text
                                        , rtcSource :: Maybe Value
                                        }
                     deriving (Show, Generic)
-$(deriveToJSON (aesonPrefix snakeCase) ''ResourceType)
+$(deriveToJSON (aesonPrefix snakeCase){sumEncoding = UntaggedValue} ''ResourceType)
 
 data Resource = Resource { resourceName         :: Text
                          , resourceType         :: ResourceType
