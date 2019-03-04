@@ -22,7 +22,7 @@ data ResourceType = ResourceTypeInBuilt Text
                                        , rtcType   :: Text
                                        , rtcSource :: Maybe Value
                                        }
-                    deriving (Show, Generic)
+                    deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase){sumEncoding = UntaggedValue} ''ResourceType)
 
 data Resource = Resource { resourceName         :: Text
@@ -33,7 +33,7 @@ data Resource = Resource { resourceName         :: Text
                          , resourceCheckEvery   :: Maybe Text
                          , resourceTags         :: Maybe [Text]
                          , resourceWebhookToken :: Maybe Text}
-              deriving (Show, Generic)
+              deriving (Show, Generic, Eq)
 
 instance ToJSON Resource where
   toJSON x = case genericToJSON (aesonPrefix snakeCase) x of
@@ -48,7 +48,7 @@ data TaskRunConfig = TaskRunConfig { trcPath :: Text
                                    , trcDir  :: Maybe Text
                                    , trcUser :: Maybe Text
                                    }
-                   deriving (Show, Generic)
+                   deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskRunConfig)
 
 data TaskImageResource = TaskImageResource { tirType    :: Text
@@ -56,22 +56,22 @@ data TaskImageResource = TaskImageResource { tirType    :: Text
                                            , tirParams  :: Maybe Value
                                            , tirVersion :: Maybe Value
                                            }
-                       deriving (Show, Generic)
+                       deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskImageResource)
 
 data TaskInput = TaskInput { tiName     :: Text
                            , tiPath     :: Maybe Text
                            , tiOptional :: Maybe Bool
                            }
-               deriving (Show, Generic)
+               deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskInput)
 
 data TaskOutput = TaskOutput { toName :: Text, toPath :: Maybe Text }
-                deriving (Show, Generic)
+                deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskOutput)
 
 data TaskCache = TaskCache { taskcachePath :: Text}
-               deriving (Show, Generic)
+               deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskCache)
 
 data TaskConfig = TaskConfig { tcPlatform      :: Text
@@ -83,11 +83,11 @@ data TaskConfig = TaskConfig { tcPlatform      :: Text
                              , tcCaches        :: Maybe [TaskCache]
                              , tcParams        :: Maybe [(Text, Text)]
                              }
-                deriving (Show, Generic)
+                deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''TaskConfig)
 
 data TaskSpec = TaskSpecFile Text | TaskSpecConfig TaskConfig
-              deriving (Show, Generic)
+              deriving (Show, Generic, Eq)
 
 instance ToJSON TaskSpec where
   toJSON (TaskSpecFile f)   = object [ "file" .= f ]
@@ -96,7 +96,7 @@ instance ToJSON TaskSpec where
 data GetVersion = GetVersionLatest
                 | GetVersionEvery
                 | GetVersionSpecific Value
-                deriving (Show, Generic)
+                deriving (Show, Generic, Eq)
 
 instance ToJSON GetVersion where
   toJSON GetVersionLatest       = String "latest"
@@ -110,7 +110,7 @@ data GetStep = GetStep { getName     :: Maybe Text
                        , getPassed   :: Maybe [Text]
                        , getTrigger  :: Maybe Bool
                        }
-             deriving (Show, Generic)
+             deriving (Show, Generic, Eq)
 
 instance ToJSON GetStep where
   toJSON GetStep{..} = object [ "get"      .= fromMaybe (resourceName getResource) getName
@@ -126,7 +126,7 @@ data PutStep = PutStep { putName      :: Maybe Text
                        , putParams    :: Maybe Value
                        , putGetParams :: Maybe Value
                        }
-             deriving (Show, Generic)
+             deriving (Show, Generic, Eq)
 
 instance ToJSON PutStep where
   toJSON PutStep{..} = object [ "put"        .= fromMaybe (resourceName putResource) putName
@@ -143,7 +143,7 @@ data TaskStep = TaskStep { taskName          :: Text
                          , taskInputMapping  :: Maybe [(Text, Text)]
                          , taskOutputMapping :: Maybe [(Text, Text)]
                          }
-              deriving (Show, Generic)
+              deriving (Show, Generic, Eq)
 
 instance {-# OVERLAPPING #-} ToJSON [(Text, Text)] where
   toJSON xs = object (pairs xs)
@@ -164,7 +164,7 @@ data Step = Get { stepGet :: GetStep, stepHooks :: StepHooks }
           | Aggregate { aggregatedSteps :: [Step], stepHooks :: StepHooks }
           | Do { doSteps :: [Step], stepHooks :: StepHooks  }
           | Try { tryStep :: Step, stepHooks :: StepHooks  }
-          deriving (Show, Generic)
+          deriving (Show, Generic, Eq)
 
 mergeHooks :: ToJSON a => a -> StepHooks -> Value
 mergeHooks step hooks = case toJSON step of
@@ -186,7 +186,7 @@ data StepHooks = StepHooks { hookOnSuccess :: Maybe Step
                            , hookOnAbort   :: Maybe Step
                            , hookEnsure    :: Maybe Step
                            }
-               deriving (Show, Generic)
+               deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''StepHooks)
 
 data Job = Job { jobName                 :: Text
@@ -203,5 +203,5 @@ data Job = Job { jobName                 :: Text
                , jobOnAbort              :: Maybe Step
                , jobEnsure               :: Maybe Step
                }
-         deriving (Show, Generic)
+         deriving (Show, Generic, Eq)
 $(deriveToJSON (aesonPrefix snakeCase) ''Job)

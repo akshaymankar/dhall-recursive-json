@@ -8,6 +8,7 @@ import Fly.Interpret
 import Data.Yaml
 import Dhall.JSON
 import Data.Maybe (catMaybes)
+import Data.List (nub)
 
 import qualified Data.Text.IO
 import qualified Data.ByteString.Char8 as BC8
@@ -40,8 +41,8 @@ main :: IO ()
 main = do
   stdin <- Data.Text.IO.getContents
   jobs <- input (list job) stdin
-  let resources = concatMap getResourcesFromJob jobs
-      resourceTypes = customResourceTypes $ map Fly.Types.resourceType resources
+  let resources = nub $ concatMap getResourcesFromJob jobs
+      resourceTypes = nub $ customResourceTypes $ map Fly.Types.resourceType resources
     in BC8.putStrLn $ encode $ omitNull $ object [ "resource_types" .= resourceTypes
                                                  , "resources" .= resources
                                                  , "jobs" .= jobs
